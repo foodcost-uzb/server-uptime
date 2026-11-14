@@ -1,0 +1,15 @@
+{
+ "Smart Control Hub (бот, Mini App, API для Hub)": "https://smartcontrolhub.duckdns.org/api/health",
+ "iiko Help (справка)": "https://smartcontrolhub.duckdns.org/help-api/health",
+ "Feed Up Control Hub": "https://feedup.duckdns.org/api/health",
+ "Child Control": "https://childcontrol.duckdns.org/",
+ "Assistant (assistant.foodcost.uz)": "https://assistant.foodcost.uz/",
+ "CRM (crm.foodcost.uz)": "https://crm.foodcost.uz/",
+ "Staff Control (staff.foodcost.uz)": "https://staff.foodcost.uz/panel/",
+ "SEO (seo.foodcost.uz)": "https://seo.foodcost.uz/",
+ "FoodCost-аналитик (analyst.foodcost.uz)": "https://analyst.foodcost.uz/",
+ "FoodLink": "https://foodlink.uz/",
+ "Navbat — сайт": "https://navbat-horeca.uz/",
+ "Navbat — приложение": "https://app.navbat-horeca.uz/",
+ "Navbat — API": "https://api.navbat-horeca.uz/"
+}
