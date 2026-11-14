@@ -1,0 +1,60 @@
+# Внешняя проверка сервера Smart Control Hub (бот + Mini App + API для Hub).
+# Раз в 5 минут снаружи: если сервер не отвечает 3 раза подряд за ~1,5 мин — сообщение в Telegram.
+# Повтор тревоги — раз в 30 минут, пока лежит; когда поднялся — «восстановлен».
+# Состояние «лежит» = прошлый запуск завершился с ошибкой (job падает, когда сервер недоступен).
+name: uptime
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+concurrency: uptime
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Проверка
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT: ${{ secrets.TG_CHAT }}
+          GH_TOKEN: ${{ github.token }}
+          URL: https://smartcontrolhub.duckdns.org/api/health
+        run: |
+          set -u
+          send() { curl -s -m 20 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+                     --data-urlencode chat_id="${TG_CHAT}" --data-urlencode text="$1" > /dev/null || true; }
+          now=$(TZ=Asia/Tashkent date '+%d.%m %H:%M')
+          ok=0
+          for i in 1 2 3; do
+            code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$URL" || true)
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            echo "попытка $i: код $code"; sleep 30
+          done
+          # прошлый завершённый плановый запуск
+          prev=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/uptime.yml/runs?status=completed&per_page=1" \
+                   --jq '.workflow_runs[0].conclusion // "success"' || echo success)
+          echo "сейчас ok=$ok, прошлый запуск: $prev"
+          if [ $ok = 1 ]; then
+            [ "$prev" = "failure" ] && send "✅ Сервер Smart Control Hub снова отвечает (${now} Ташкент). Бот, Mini App и Hub работают."
+            exit 0
+          fi
+          min=$(date -u +%M)
+          if [ "$prev" != "failure" ] || [ $((10#$min % 30)) -lt 5 ]; then
+            send "🚨 Сервер Smart Control Hub не отвечает (${now} Ташкент, код ${code}). Бот, Mini App и Hub недоступны. Если не поднимется сам — перезапуск в панели my.contabo.com → VPS 161.97.68.205 → Restart."
+          fi
+          exit 1
+  keepalive:
+    # GitHub выключает плановые запуски в репозитории без коммитов 60 дней — раз в месяц пустой коммит.
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          last=$(git log -1 --format=%ct); age=$(( ($(date +%s) - last) / 86400 ))
+          if [ $age -ge 30 ]; then
+            git config user.name uptime-bot; git config user.email uptime-bot@users.noreply.github.com
+            git commit --allow-empty -m "keepalive"; git push
+          fi
