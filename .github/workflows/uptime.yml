@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+    inputs:
+      test:
+        description: "Прислать тестовое сообщение в Telegram"
+        type: boolean
+        default: false
 permissions:
   actions: read
   contents: write
@@ -27,6 +32,9 @@ jobs:
           send() { curl -s -m 20 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
                      --data-urlencode chat_id="${TG_CHAT}" --data-urlencode text="$1" > /dev/null || true; }
           now=$(TZ=Asia/Tashkent date '+%d.%m %H:%M')
+          if [ "${{ inputs.test || false }}" = "true" ]; then
+            send "🔔 Внешняя проверка сервера Smart Control Hub подключена (${now} Ташкент). Раз в 5 минут; если сервер не ответит — напишу сюда."
+          fi
           ok=0
           for i in 1 2 3; do
             code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$URL" || true)
